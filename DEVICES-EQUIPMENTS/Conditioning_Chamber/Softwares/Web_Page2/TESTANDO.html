@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<body style="background-color:rgba(227, 239, 178, 0.762);">
+
+<center><h2>CONDITIONING CAGE (CxCOND) VERSION: ANA - NNC</h2></center>
+<!-- 
+<button type="button" onclick="loadDoc()">Request data</button></br>
+-->
+
+Cage Control Password: <input id="senha" type="password" value="" />
+<button type="button" onclick="enviarESP()">Send Parameters</button>
+<button type="button" onclick="enviarESPSTART()">START</button>
+<button type="button" onclick="enviarESPABORT()">ABORT</button>
+<button type="button" onclick="HELP()">HELP</button></br>
+<!-- 
+<button type="button" onclick="testeESP()">TESTANDO COISAS</button></br>
+-->
+<div id="entrada">
+ <hr>
+  <center>SPECIAL BUTTONS</center>
+  <button type="button" onclick="PROGBUTTON(1)">TRIAL CONF1</button> =>  Program for checking stimulus current and sound<br>
+  <button type="button" onclick="PROGBUTTON(2)">TRIAL CONF2</button> =>  Just to calibrate the stimulus current - NO SOUND<br>
+  <button type="button" onclick="PROGBUTTON(3)">TRIAL CONF3</button> =>  NO SOUND: 120s wait and start 20ms(window) of shock for 2 seconds<br>
+  <button type="button" onclick="PROGBUTTON(4)">TRIAL CONF4</button> =>  NO SOUND: 60s wait and start 20ms (window) of shock for 2 seconds<br>
+  <button type="button" onclick="PROGBUTTON(5)">TRIAL CONF5</button> =>  WITH SOUND: wait 120s, sound for 30s and shock in the last 2seconds<br>
+  <button type="button" onclick="PROGBUTTON(6)">TRIAL CONF6</button> =>  ONLY SOUND: wait 2 seconds and play 30seconds of sound<br><br>
+
+ <hr>
+ <p><center>TRIAL CONFIGURATION</center></p>
+ <hr>
+
+  Inter-trial silence or initial silence (seconds)<input id="Silence" type="text" value="" /><br>
+  Sound onset (seconds)<input id="SoundOnset" type="text" value="" />  
+  Sound duration (seconds)<input id="SoundDuration" type="text" value="" /><br>
+  Shock onset (seconds)<input id="ShockOnset" type="text" value="" />  
+  Shock duration (seconds)<input id="ShockDuration" type="text" value="" /><br>
+  </br>
+  Carrier Frequency (Hz)<input id="CarrierFreq" type="text" value="" />  
+  Modulator Frequency (Hz)<input id="ModFreq" type="text" value="" /><br>
+  ShockPulse High (ms)<input id="ShockPulseHigh" type="text" value="" />  
+  ShockPulse Low (ms)<input id="ShockPulseLow" type="text" value="" /><br>
+  Sound Volume (%)<input id="SoundVolume" type="text" value="" /><br>
+  </br>
+  <input id="SubmitTrial" type="button" onclick="adicionarTrial()" value="Add Trial" /><br>
+</div>
+<hr>
+<textarea id="expTexto" rows="4" cols="50"></textarea>
+<button type="button" onclick="programaExperimento()">LOAD TRIAL(S)</button></br>
+<hr><br>
+<div id="saidaHTML">
+</div>
+
+<p id="demo"></p>
+ 
+<script>
+//Variáveis Globais
+xhr=new XMLHttpRequest();
+
+var Trials = [];
+var varSet = [];
+
+varSet[0]="Silence";
+varSet[1]="SoundOnset";
+varSet[2]="SoundDuration";
+varSet[3]="ShockOnset";
+varSet[4]="ShockDuration";
+varSet[5]="CarrierFreq";
+varSet[6]="ModFreq";
+varSet[7]="ShockPulseHigh";
+varSet[8]="ShockPulseLow";
+varSet[9]="SoundVolume";
+for (var i=0;i<varSet.length;i++) Trials[i]=[];
+
+function adicionarTrial()
+{
+var indice=0;
+if (typeof Trials[0] != 'undefined') indice=Trials[0].length;
+for (var i=0;i<varSet.length;i++) Trials[i][indice]=document.getElementById(varSet[i]).value;
+ShowRecordedTrials();
+};
+function PROGBUTTON(i)
+{
+    var listaProgV=[
+        "Silence", 
+        "SoundOnset", 
+        "SoundDuration", 
+        "ShockOnset", 
+        "ShockDuration", 
+        "CarrierFreq", 
+        "ModFreq", 
+        "ShockPulseHigh", 
+        "ShockPulseLow", 
+        "SoundVolume"];
+switch(i)
+  {
+  case 1:
+    var ProgV=[0,0,60,0,60,1000,1,1000,50,50];
+    break;
+  case 2:
+    var ProgV=[0,0,0,0,90,1,0,2000,100,50];
+    break;
+  case 3:
+    var ProgV=[0,0,60,0,60,1000,0,1000,500,50];
+    break;
+  case 4:
+    var ProgV=[60,0,0,0,2,1000,1,20,20,0];
+    break;
+  case 5:
+    var ProgV=[120,0,30,28,2,1000,0,20,20,20];
+    break;
+  case 6:
+    var ProgV=[2,0,30,0,0,1000,0,0,0,30];
+    break;
+  default:
+    var ProgV=[1,2,3,4,5,6,7,8,9,10];
+    break;
+  }
+  for (var i=0;i<varSet.length;i++) document.getElementById(varSet[i]).value=ProgV[i];
+
+};       
+function HELP()
+{
+  alert("This is a simple web interface to control the Conditioning Cage (CxCOND - 15/07/2025) device.\n\n" +
+        "1. Enter the control password in the 'Cage Control Password' field (ex marcio).\n" +
+        "2. Use the buttons to send parameters, start, or abort the experiment.\n" +
+        "3. Configure trials by entering values in the fields provided and clicking 'Add Trial'.\n" +
+        "4. Load trials from the text area using 'LOAD TRIAL(S)'.\n" +
+        "5. Recorded trials will be displayed below for review and deletion.\n\n" + 
+        "Function test (with sound): \n" + 
+        " 1. To check if the speaker is operating at the required intensity for your protocol, use the multimeter set to current reading (scale: 2000 mA). To do this, measure the first two bars. The intensity to be measured will vary according to the protocol and is defined by the position of the rotary knob;\n" + 
+        " 2. Turn on the speaker, leaving the knob in the middle; \n" + 
+        " 3. To use the Decibel Meter: insert the batteries, turn it on, and position it inside the speaker. Once positioned, close the speaker door and open the video application. The decibels are read through the camera. The sound volume is proportional to the desired decibels (75 decibels = volume 18);\n" + 
+        " 4. The indicated test steps should be followed with the desired protocol values.;\n");
+};
+
+function ShowRecordedTrials()
+{
+var strTemp="<center><p> ALL RECORDED TRIALS </p></center>";
+
+for (var i=0;i<Trials[0].length;i++)
+  {
+  strTemp+="<hr>";
+  strTemp+="<p>RECORDED TRIAL - " + i + " Start at (seg): " + Trials[0][i] + "s. ";
+  strTemp+="<br> To delete this trial click ====> <button id=\"reg" + i + "\" type=\"button\" onclick=\"ClickDeleteReg(this)\">Delete</button></p>";
+
+  strTemp+=varSet[1] + " = " + Trials[1][i] + " e ";
+  strTemp+=varSet[2] + " = " + Trials[2][i];
+  strTemp+="<br>" + varSet[3] + " = " + Trials[3][i] + " e ";
+  strTemp+=varSet[4] + " = " + Trials[4][i];
+  strTemp+="<br>" + varSet[5] + " = " + Trials[5][i] + " e ";
+  strTemp+=varSet[6] + " = " + Trials[6][i];
+  strTemp+="<br>" + varSet[7] + " = " + Trials[7][i] + " e ";
+  strTemp+=varSet[8] + " = " + Trials[8][i];
+  strTemp+="<br>" + varSet[9] + " = " + Trials[9][i]; 
+  strTemp+="<hr>";
+  }
+//strTemp+="Sort = " + Trials[0].sort();  ele faz o sort e fode tudo  
+document.getElementById("saidaHTML").innerHTML = strTemp;
+
+strTemp="";
+for (var j=0;j<varSet.length;j++)
+  {
+  //strTemp+="|";
+  for (var i=0;i<((Trials[0].length)-1);i++)
+    strTemp+=Trials[j][i] + ";";
+  strTemp+=Trials[j][i] + "|";
+  }
+strTemp=strTemp.substring(0, strTemp.length-1); 
+document.getElementById("expTexto").value=strTemp;
+}
+
+function programaExperimento()
+{
+//Trials = [];
+
+var linha=document.getElementById("expTexto").value;
+var linha2=linha.split("|");
+var linha3;
+
+for (var i=0; i<linha2.length ;i++)
+  {
+  linha3=linha2[i].split(";");
+  for (var j=0; j<linha3.length ;j++)
+    Trials[i][j]=linha3[j];
+  }
+  
+ShowRecordedTrials();
+}
+
+
+function ClickDeleteReg(ele)
+{
+  var iQual=ele.id.substring(3);
+  
+  if (confirm("Tem certeza? Voce vai deletar o TRIAL: " + iQual))
+    for (var i=0;i<varSet.length;i++) Trials[i].splice(iQual,1);
+    
+  
+  ShowRecordedTrials();
+}
+
+function trataResposta()
+{
+if(xhr.readyState == 4 && xhr.status == 200) 
+  {
+      alert(xhr.responseText);
+  }
+};
+
+
+function enviarESP() 
+{
+//MUITO CUIDADO, FALTA SORT E OUTRAS COISITAS MAS
+var strTemp="";
+
+
+strTemp+="ProgramarTrials=" + Trials[0].length + "&";
+strTemp+="strTrials=";
+
+for (var j=0;j<varSet.length;j++)
+  for (var i=0;i<Trials[0].length;i++)
+    strTemp+=Trials[j][i] + "*";
+
+strTemp=strTemp.substring(0,strTemp.length-1);
+
+var strTemp2="Senha=" + document.getElementById("senha").value + "&";
+
+xhr.open("POST", "http://168.168.168.1/Programar", true);
+xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+xhr.onreadystatechange = trataResposta;
+xhr.send(strTemp2+strTemp);
+
+};
+
+function enviarESPSTART() 
+{
+//MUITO CUIDADO, FALTA SORT E OUTRAS COISITAS MAS
+//var strTemp="EscrevaBytes=32";
+var strTemp="Senha=" + document.getElementById("senha").value + "&START=1";
+xhr.open("POST", "http://168.168.168.1/Programar", true);
+xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+xhr.onreadystatechange = trataResposta;
+xhr.send(strTemp);
+};
+
+function enviarESPABORT() 
+{
+//MUITO CUIDADO, FALTA SORT E OUTRAS COISITAS MAS
+//var strTemp="EscrevaBytes=32";
+var strTemp="Senha=" + document.getElementById("senha").value + "&ABORT=1";
+xhr.open("POST", "http://168.168.168.1/Programar", true);
+xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+xhr.onreadystatechange = trataResposta;
+xhr.send(strTemp);
+};
+
+function testeESP() 
+{
+//MUITO CUIDADO, FALTA SORT E OUTRAS COISITAS MAS
+//var strTemp="EscrevaBytes=32";
+var strTemp="Comando4=1";
+
+
+
+
+xhr.open("POST", "http://168.168.168.1/Programar", true);
+xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+xhr.onreadystatechange = trataResposta;
+xhr.send(strTemp);
+
+};
+function loadDoc() 
+{
+xhr.open("POST", "http://168.168.168.1/Programar", true);
+xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+xhr.onreadystatechange = trataResposta;
+xhr.send("Comando4=Este foi o Primeiro&teste1=Depois este&teste2=LIGA ESTA PORRA");
+
+//ProgramarTrials=5&strTrials=2.14.314;2342342342;2423423;234234;...
+//
+};
+
+</script>
+
+</body>
+</html>

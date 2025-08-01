@@ -18,13 +18,15 @@
 /*############################################################################################################
         Includes.
 ############################################################################################################*/
-    #include <Arduino.h>
-  #include "user_interface.h"
+  #include <Arduino.h>
+  //#include "user_interface.h"
+ // #include <TimeLib.h>   
   #include "os_type.h"
-  
+
   #include <ESP8266WiFi.h> // 
   #include <ESP8266WebServer.h>
   #include <ESP8266mDNS.h>
+  #include <ESP8266TimerInterrupt.h>
   
   #include <SPI.h>
   #include <EEPROM.h>
@@ -35,8 +37,11 @@
 /*############################################################################################################
         Global variables.
 ############################################################################################################*/
-  
-  const char *ssid = "ConditioningCage";
+  IPAddress local_IP(168,168,168,1);
+  IPAddress gateway(168,168,168,1);
+  IPAddress subnet(255,255,255,0);
+    
+  const char *ssid = "CXCOND_ANA";
   const char *password = "0112358132"; // Fibonacci
   IPAddress myIP;
   ESP8266WebServer server ( 80 );
@@ -96,7 +101,9 @@
 
 
     WiFi.mode(WIFI_AP);
+    WiFi.softAPConfig(local_IP, gateway, subnet);
     WiFi.softAP(ssid, password);
+    
     myIP = WiFi.softAPIP();
 
     //Domain Name Server. 
@@ -239,13 +246,21 @@
               else if ((server.argName(i+1)=="strTrials")&&(bSenha))
                 {
                   i++;
-                  ArduinoDueSkinner->ProgramaVariaveis(argvalue.toInt(),server.arg(i));
+                  String xxx=server.arg(i);
+                  parseStringToFloat(xxx,'*',ArduinoDueSkinner->BufferFloat);
+                  ArduinoDueSkinner->ProgramaVariaveis(argvalue.toInt(),xxx);
+                  //strResponse+="\nSequencia PROGRAMADA\n"+String(argvalue.toInt())+"\n"+xxx);
+                  strResponse+="Parameters programmed (n=" + String(argvalue.toInt()) + String(") \nstr=") + xxx + 
+                                String(") \nshock duration=")+String( ArduinoDueSkinner->shock_duration[0]) +
+                                String(") \nsilence=")+String( ArduinoDueSkinner->silence[0]); 
                 } else strResponse+="STRING PARAMETERS IS MISSING";
+          
           }
 
           if ((argname=="START")&&bSenha)
             {
               ArduinoDueSkinner->StartTrials();
+               //digitalWrite ( ArduinoDueSkinner->pinSOUND, HIGH );
               strResponse+="\nSTART COMMAND\n";
             }
             
